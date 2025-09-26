@@ -50,9 +50,15 @@
                         <option selected>Other</option>
                     </select>
                      <select name="status" class="bg-gray-900 border border-gray-600 text-white rounded-md shadow-sm w-full p-2 focus:ring-red-500 focus:border-red-500">
-                        <option selected>To Contact</option>
+                        <option>To Contact</option>
                         <option>Whatsapp Sent</option>
                         <option>No Whatsapp</option>
+                        <option>Replied</option>
+                        <option>Not Interested in KW</option>
+                        <option>Invite to Events/ Networking</option>
+                        <option>Appointment</option>
+                        <option>Ready to join KW</option>
+                        <option>JOINED</option>
                     </select>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
@@ -148,27 +154,49 @@
             document.getElementById('add-recruit-form').addEventListener('submit', handleAddRecruit);
             document.getElementById('btn-apply-bulk').addEventListener('click', applyBulkAction);
             document.getElementById('btn-clear-selection').addEventListener('click', clearSelection);
-            document.getElementById('table-body').addEventListener('change', handleSingleStatusChange);
+            document.getElementById('table-body').addEventListener('change', handleTableChange);
+            document.getElementById('table-body').addEventListener('blur', handleNoteUpdate, true);
         }
         
-        async function handleSingleStatusChange(event) {
+        function handleTableChange(event) {
             if (event.target.classList.contains('status-select-in-table')) {
-                const select = event.target;
-                const rowIndex = select.dataset.originalIndex; 
-                if (rowIndex === undefined) return;
-                const newStatus = select.value;
-                const result = await callScriptFunction('updateSingleStatus', { rowIndex, newStatus });
-                if (result.success) {
-                    const dataRow = originalData.find(row => row.originalIndex == rowIndex);
-                    if(dataRow) {
-                        dataRow[headerMap['Status']] = newStatus;
-                        dataRow[headerMap['LastContactDate']] = new Date().toISOString();
-                    }
-                    applyFilters(); 
-                }
+                handleSingleStatusChange(event);
             }
         }
         
+        async function handleSingleStatusChange(event) {
+            const select = event.target;
+            const rowIndex = select.dataset.originalIndex; 
+            if (rowIndex === undefined) return;
+            const newStatus = select.value;
+            const result = await callScriptFunction('updateSingleStatus', { rowIndex, newStatus });
+            if (result.success) {
+                const dataRow = originalData.find(row => row.originalIndex == rowIndex);
+                if(dataRow) {
+                    dataRow[headerMap['Status']] = newStatus;
+                    dataRow[headerMap['LastContactDate']] = new Date().toISOString();
+                }
+                applyFilters(); 
+            }
+        }
+        
+        async function handleNoteUpdate(event) {
+            if (event.target.classList.contains('note-input-in-table')) {
+                const input = event.target;
+                const rowIndex = input.dataset.originalIndex;
+                if (rowIndex === undefined) { return; }
+                const newNote = input.value;
+                const dataRow = originalData.find(row => row.originalIndex == rowIndex);
+                if (dataRow && dataRow[headerMap['Notes']] !== newNote) {
+                     const result = await callScriptFunction('updateSingleNote', { rowIndex, newNote });
+                     if (result.success) {
+                        dataRow[headerMap['Notes']] = newNote;
+                        dataRow[headerMap['LastContactDate']] = new Date().toISOString();
+                     }
+                }
+            }
+        }
+
         async function applyBulkAction() {
             const newStatus = document.getElementById('bulk-action-status').value;
             if (!newStatus) return;
@@ -254,12 +282,12 @@
             const statusFilter = document.getElementById('filter-status').value;
 
             const filteredData = originalData.filter(row => {
-                const rowStatus = row[headerMap.Status] ? String(row[headerMap.Status]).trim() : '';
+                const rowStatus = row[headerMap.Status] ? String(row[headerMap.Status]).trim().toUpperCase() : '';
                  const searchString = [
                     row[headerMap.Name], row[headerMap.Surname], row[headerMap.Suburb], row[headerMap.Agency]
                 ].join(' ').toLowerCase();
                 return (!agencyFilter || (row[headerMap.Agency] && String(row[headerMap.Agency]).trim() === agencyFilter)) &&
-                       (!statusFilter || rowStatus.toUpperCase() === statusFilter.toUpperCase()) &&
+                       (!statusFilter || rowStatus === statusFilter) &&
                        (searchString.includes(searchTerm));
             });
             renderTable(filteredData);
@@ -304,7 +332,10 @@
                         rowHTML += `<td class="px-4 py-1"><select class="status-select-in-table bg-gray-700 border-gray-600 rounded p-1 text-xs" data-original-index="${originalIndex}">${statusOptions}</select></td>`;
                     } else if (headerName === 'WhatsApp Link' && String(content).startsWith('http')) {
                         rowHTML += `<td class="px-4 py-1"><a href="${content}" target="_blank" class="text-red-500 hover:underline font-semibold text-xs">Open Chat</a></td>`;
-                    } else {
+                    } else if (headerName === 'Notes') {
+                         rowHTML += `<td class="px-4 py-1"><input type="text" class="note-input-in-table bg-gray-700 w-full text-xs p-1 rounded-md" data-original-index="${originalIndex}" value="${content}"></td>`;
+                    }
+                    else {
                         rowHTML += `<td class="px-4 py-1 text-xs">${content}</td>`;
                     }
                 });
@@ -316,6 +347,8 @@
 
         function updateDashboardStats() {
             const statsContainer = document.getElementById('stats-container');
+            if(!statsContainer) return; 
+            
             statsContainer.innerHTML = '';
             
             statsContainer.innerHTML += `
@@ -401,5 +434,4 @@
     </script>
 </body>
 </html>
-
 
