@@ -126,7 +126,7 @@
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyESYVnpFIUaxf8j8eaV8ytn03ew0TsY_BPm-6O90lMnFTmSb-QxlEqjpSEiZ-7JDHatw/exec';
         const STATUS_OPTIONS = [
             "To Contact", "Whatsapp Sent", "No Whatsapp", "Replied", "Not Interested in KW",
-            "Invite to Events/ Networking", "Appointment", "Ready to join KW"
+            "Invite to Events/ Networking", "Appointment", "Ready to join KW", "JOINED"
         ];
         
         document.addEventListener('DOMContentLoaded', fetchData);
@@ -259,7 +259,7 @@
                     row[headerMap.Name], row[headerMap.Surname], row[headerMap.Suburb], row[headerMap.Agency]
                 ].join(' ').toLowerCase();
                 return (!agencyFilter || (row[headerMap.Agency] && String(row[headerMap.Agency]).trim() === agencyFilter)) &&
-                       (!statusFilter || rowStatus === statusFilter) &&
+                       (!statusFilter || rowStatus.toUpperCase() === statusFilter.toUpperCase()) &&
                        (searchString.includes(searchTerm));
             });
             renderTable(filteredData);
@@ -300,7 +300,7 @@
                     const content = row[colIndex] || '';
 
                     if (headerName === 'Status') {
-                        const statusOptions = STATUS_OPTIONS.map(opt => `<option value="${opt}" ${String(content).trim() === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                        const statusOptions = STATUS_OPTIONS.map(opt => `<option value="${opt}" ${String(content).trim().toUpperCase() === opt ? 'selected' : ''}>${opt}</option>`).join('');
                         rowHTML += `<td class="px-4 py-1"><select class="status-select-in-table bg-gray-700 border-gray-600 rounded p-1 text-xs" data-original-index="${originalIndex}">${statusOptions}</select></td>`;
                     } else if (headerName === 'WhatsApp Link' && String(content).startsWith('http')) {
                         rowHTML += `<td class="px-4 py-1"><a href="${content}" target="_blank" class="text-red-500 hover:underline font-semibold text-xs">Open Chat</a></td>`;
@@ -326,7 +326,7 @@
             `;
             
             STATUS_OPTIONS.forEach(status => {
-                const count = originalData.filter(r => r[headerMap.Status] && String(r[headerMap.Status]).trim() === status).length;
+                const count = originalData.filter(r => r[headerMap.Status] && String(r[headerMap.Status]).trim().toUpperCase() === status).length;
                 statsContainer.innerHTML += `
                     <div class="bg-gray-800 p-2 rounded-lg text-center">
                         <span class="text-2xl font-bold text-white">${count}</span>
